@@ -48,7 +48,7 @@ var secretCodeSeed [90]string = [90]string{
 	"t", "b", "n"}
 
 func main() {
-	if codeSize < defaultCodeSize || codeSize > 4096 {
+	if codeSize < defaultCodeSize {
 		codeSize = defaultCodeSize
 	}
 	secretCode = SecretCode(codeSize)
