@@ -10,6 +10,11 @@ import (
 	"time"
 )
 
+// The default password length, if run without any options.
+var defaultCodeSize int = 12
+var codeSize int
+var secretCode, shortCode, secureID, encodedSecureID string
+var secretSha256Sum [32]byte
 var secretCodeSeed [90]string = [90]string{
 	"w", "l", "f",
 	"`", "~", "#",
@@ -42,77 +47,55 @@ var secretCodeSeed [90]string = [90]string{
 	"4", "0", "/",
 	"t", "b", "n"}
 
-var codeSize int
-
 func main() {
-
-	if len(os.Args[1:]) > 0 {
-		if os.Args[1] != "help" &&
-			os.Args[1] != "-help" &&
-			os.Args[1] != "--help" &&
-			os.Args[1] != "-sha256" &&
-			os.Args[1] != "-uuid" &&
-			os.Args[1] != "-short" {
-			var err error
-			codeSize, err = strconv.Atoi(os.Args[1])
-			if err != nil {
-				fmt.Println("Usage: passworder [length] [-sha256] [-uuid] [-short]")
-				return
-			} else {
-				if codeSize < 12 || codeSize > 4096 {
-					codeSize = 12
-				}
-			}
-		}
-	} else {
-		codeSize = 12
+	if codeSize < defaultCodeSize || codeSize > 4096 {
+		codeSize = defaultCodeSize
 	}
-
-	var secretCode string = SecretCode(codeSize)
-	secretSha256Sum := sha256.Sum256([]byte(secretCode[:]))
-	encodedSecureID := string(hex.EncodeToString(secretSha256Sum[:]))
-	var shortCode string = string(encodedSecureID[:8])
-	var secureID string = string(encodedSecureID[:8]) + "-" +
+	secretCode = SecretCode(codeSize)
+	secretSha256Sum = sha256.Sum256([]byte(secretCode[:]))
+	encodedSecureID = string(hex.EncodeToString(secretSha256Sum[:]))
+	shortCode = string(encodedSecureID[:8])
+	secureID = string(encodedSecureID[:8]) + "-" +
 		string(encodedSecureID[8:12]) + "-" +
 		string(encodedSecureID[12:16]) + "-" +
 		string(encodedSecureID[16:20]) + "-" +
 		string(encodedSecureID[20:32])
 
-	if len(os.Args[1:]) > 0 {
-		if os.Args[1] == "help" ||
-			os.Args[1] == "-help" ||
-			os.Args[1] == "--help" {
-			fmt.Println("Usage: passworder [length] [-sha256] [-uuid] [-short]")
-			return
-		}
-		if os.Args[1] == "-uuid" {
-			fmt.Println(secureID)
-			return
-		}
-		if os.Args[1] == "-short" {
-			fmt.Println(shortCode)
-			return
-		}
-		if os.Args[1] == "-sha256" {
-			fmt.Println(encodedSecureID)
-			return
-		}
-	}
-
-	if len(secretCode) > 0 && codeSize == 12 {
+	if len(os.Args[1:]) > 0 && len(os.Args[1:]) < 8 {
+		options(os.Args[1])
+	} else {
 		fmt.Printf("UUID: %s\n", secureID)
 		fmt.Printf("Short Code: %s\n", shortCode)
 		fmt.Printf("Secret: %s\n", secretCode)
 		fmt.Printf("Secret SHA256: %s\n", encodedSecureID)
-		return
 	}
-	if len(secretCode) > 0 && codeSize > 12 {
-		fmt.Println(secretCode)
-		return
-	}
-	if len(secretCode) == 0 || codeSize == 0 {
-		fmt.Println("Usage: passworder [length] [-sha256] [-uuid] [-short]")
-		return
+}
+
+func options(op string) {
+	switch {
+	case op == "-sha256":
+		fmt.Println(encodedSecureID)
+		break
+	case op == "-short":
+		fmt.Println(shortCode)
+		break
+	case op == "-uuid":
+		fmt.Println(secureID)
+		break
+	default:
+		var err error
+		codeSize, err = strconv.Atoi(op)
+		if err != nil {
+			fmt.Println("Usage: passworder [length] [-sha256] [-uuid] [-short]")
+			return
+		} else {
+			if codeSize < 4097 {
+				secretCode = SecretCode(codeSize)
+				fmt.Println(secretCode)
+			} else {
+				fmt.Printf("%v exceeds maximum allowed length of 4096.\n", codeSize)
+			}
+		}
 	}
 }
 
