@@ -13,7 +13,7 @@ import (
 // The default password length, if run without any options.
 var defaultCodeSize int = 12
 var codeSize int
-var secretCode, shortCode, secureID, encodedSecureID string
+var secretCode, shortCode, secureID, hexCode, encodedSecureID string
 var secretSha256Sum [32]byte
 var secretCodeSeed [90]string = [90]string{
 	"w", "l", "f",
@@ -55,24 +55,50 @@ func main() {
 	secretSha256Sum = sha256.Sum256([]byte(secretCode[:]))
 	encodedSecureID = string(hex.EncodeToString(secretSha256Sum[:]))
 	shortCode = string(encodedSecureID[:8])
+	hexCode = string(encodedSecureID[:codeSize])
 	secureID = string(encodedSecureID[:8]) + "-" +
 		string(encodedSecureID[8:12]) + "-" +
 		string(encodedSecureID[12:16]) + "-" +
 		string(encodedSecureID[16:20]) + "-" +
 		string(encodedSecureID[20:32])
 
-	if len(os.Args[1:]) > 0 && len(os.Args[1:]) < 8 {
-		options(os.Args[1])
+	if len(os.Args[1:]) > 0 {
+		if len(os.Args[2:]) > 0 && os.Args[2] == "-hex" {
+			var err error
+			codeSize, err = strconv.Atoi(os.Args[1])
+			if err != nil {
+				fmt.Println("Usage: passworder (<number> [-hex]) [-sha256] [-uuid] [-short]")
+				return
+			} else {
+				if codeSize < 4097 {
+					hexCode = string(encodedSecureID[:codeSize])
+					fmt.Println(hexCode)
+				} else {
+					fmt.Printf("%v exceeds maximum allowed length of 4096.\n", codeSize)
+				}
+			}
+		}
+		if len(os.Args[2:]) > 0 && os.Args[2] != "-hex" {
+			fmt.Println("Usage: passworder (<number> [-hex]) [-sha256] [-uuid] [-short]")
+			return
+		}
+		if len(os.Args[1:]) > 0 && len(os.Args[2:]) == 0 {
+			options(os.Args[1])
+		}
 	} else {
 		fmt.Printf("UUID: %s\n", secureID)
 		fmt.Printf("Short Code: %s\n", shortCode)
 		fmt.Printf("Secret: %s\n", secretCode)
+		fmt.Printf("Hexidecimal: %s\n", hexCode)
 		fmt.Printf("Secret SHA256: %s\n", encodedSecureID)
 	}
 }
 
 func options(op string) {
 	switch {
+	case op == "-hex":
+		fmt.Println(hexCode)
+		break
 	case op == "-sha256":
 		fmt.Println(encodedSecureID)
 		break
@@ -86,7 +112,7 @@ func options(op string) {
 		var err error
 		codeSize, err = strconv.Atoi(op)
 		if err != nil {
-			fmt.Println("Usage: passworder [length] [-sha256] [-uuid] [-short]")
+			fmt.Println("Usage: passworder (<number> [-hex]) [-sha256] [-uuid] [-short]")
 			return
 		} else {
 			if codeSize < 4097 {
