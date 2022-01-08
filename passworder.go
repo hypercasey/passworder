@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"math/rand"
@@ -52,10 +53,10 @@ func main() {
 		codeSize = defaultCodeSize
 	}
 	secretCode = SecretCode(codeSize)
-	secretSha256Sum = sha256.Sum256([]byte(secretCode[:]))
+	secretSha256Sum = sha256.Sum256([]byte(secretCode[:codeSize]))
 	encodedSecureID = string(hex.EncodeToString(secretSha256Sum[:]))
 	shortCode = string(encodedSecureID[:8])
-	hexCode = string(encodedSecureID[:codeSize])
+	hexCode = string(encodedSecureID[:])
 	secureID = string(encodedSecureID[:8]) + "-" +
 		string(encodedSecureID[8:12]) + "-" +
 		string(encodedSecureID[12:16]) + "-" +
@@ -63,41 +64,46 @@ func main() {
 		string(encodedSecureID[20:32])
 
 	if len(os.Args[1:]) > 0 {
-		if len(os.Args[2:]) > 0 && os.Args[2] == "-hex" {
+		if len(os.Args[2:]) > 0 && os.Args[2] == "-base64" {
 			var err error
 			codeSize, err = strconv.Atoi(os.Args[1])
 			if err != nil {
-				fmt.Println("Usage: passworder (<number> [-hex]) [-sha256] [-uuid] [-short]")
+				fmt.Println("Usage: passworder (<number> [-base64]) [-sha256] [-uuid] [-short]")
 				return
 			} else {
 				if codeSize < 4097 {
-					hexCode = string(encodedSecureID[:codeSize])
-					fmt.Println(hexCode)
+					secretCode = SecretCode(codeSize)
+					secretBase64 := base64.StdEncoding.EncodeToString([]byte(secretCode[:codeSize]))
+					fmt.Println(secretBase64)
 				} else {
 					fmt.Printf("%v exceeds maximum allowed length of 4096.\n", codeSize)
 				}
 			}
 		}
-		if len(os.Args[2:]) > 0 && os.Args[2] != "-hex" {
-			fmt.Println("Usage: passworder (<number> [-hex]) [-sha256] [-uuid] [-short]")
+		if len(os.Args[2:]) > 0 && os.Args[2] != "-base64" {
+			fmt.Println("Usage: passworder (<number> [-base64]) [-sha256] [-uuid] [-short]")
 			return
 		}
 		if len(os.Args[1:]) > 0 && len(os.Args[2:]) == 0 {
 			options(os.Args[1])
 		}
 	} else {
+
+		secretCode = SecretCode(codeSize)
+		secretBase64 := base64.StdEncoding.EncodeToString([]byte(secretCode[:codeSize]))
+		fmt.Printf("Secret: %s\n", secretCode)
+		fmt.Printf("Secret Base64: %s\n", secretBase64)
 		fmt.Printf("UUID: %s\n", secureID)
 		fmt.Printf("Short Code: %s\n", shortCode)
-		fmt.Printf("Secret: %s\n", secretCode)
-		fmt.Printf("Hexidecimal: %s\n", hexCode)
 		fmt.Printf("Secret SHA256: %s\n", encodedSecureID)
 	}
 }
 
 func options(op string) {
 	switch {
-	case op == "-hex":
-		fmt.Println(hexCode)
+	case op == "-base64":
+		secretBase64 := base64.StdEncoding.EncodeToString([]byte(secretCode[:codeSize]))
+		fmt.Println(secretBase64)
 		break
 	case op == "-sha256":
 		fmt.Println(encodedSecureID)
@@ -112,12 +118,14 @@ func options(op string) {
 		var err error
 		codeSize, err = strconv.Atoi(op)
 		if err != nil {
-			fmt.Println("Usage: passworder (<number> [-hex]) [-sha256] [-uuid] [-short]")
+			fmt.Println("Usage: passworder (<number> [-base64]) [-sha256] [-uuid] [-short]")
 			return
 		} else {
 			if codeSize < 4097 {
 				secretCode = SecretCode(codeSize)
-				fmt.Println(secretCode)
+				secretBase64 := base64.StdEncoding.EncodeToString([]byte(secretCode[:codeSize]))
+				fmt.Printf("Secret: %s\n", secretCode)
+				fmt.Printf("Secret Base64: %s\n", secretBase64)
 			} else {
 				fmt.Printf("%v exceeds maximum allowed length of 4096.\n", codeSize)
 			}
